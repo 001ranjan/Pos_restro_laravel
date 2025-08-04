@@ -1,0 +1,17 @@
+Meeting Discussion Point Of View (14/01/2025) =>
+================================================
+	1) Billing Alteration point (including print page) => sub total - discount + gst
+	 	A) GST Amount = (Subtotal - Discount) × GST Rate
+		B) Total Amount Payable = (Subtotal - Discount) + GST Amount
+
+	2) "Apply Discount" Must be placed in these modules
+		=> KOT
+		=> Bill
+		=> POS
+
+	3) After Adding Customer details in order page, Add hyperlink and redirect to the customer update form like add new form.
+
+	4) Remove Sum Total In Rounded Off Price. (i.e, 12.50 => 13)
+		=> Show Rounded Off Rs (in minus / plus, how many paise rounded off)
+
+	5) Split Orders Money => Error Rectification Needed.
