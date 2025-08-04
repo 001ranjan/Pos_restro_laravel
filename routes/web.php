@@ -1,7 +1,7 @@
 <?php
 
-
 use App\Exports\PaymentExport;
+use App\Livewire\CustomerDisplay;
 use App\Http\Middleware\SuperAdmin;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Route;
@@ -29,28 +29,28 @@ use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\CustomModuleController;
 use App\Http\Controllers\ItemCategoryController;
 use App\Http\Controllers\ItemModifierController;
+use App\Http\Controllers\PaypalPaymentController;
 use App\Http\Controllers\GlobalSettingController;
 use App\Http\Controllers\ModifierGroupController;
 use App\Http\Controllers\WaiterRequestController;
 use App\Http\Controllers\OnboardingStepController;
 use App\Http\Controllers\PayfastPaymentController;
 use App\Http\Controllers\PaystackPaymentController;
+use App\Http\Controllers\SuperAdmin\PaypalController;
 use App\Http\Controllers\DeliveryExecutiveController;
 use App\Http\Controllers\RestaurantPaymentController;
 use App\Http\Controllers\RestaurantSettingController;
 use App\Http\Controllers\SuperadminSettingController;
 use App\Http\Controllers\FlutterwavePaymentController;
+use App\Http\Controllers\SuperAdmin\PayfastController;
+use App\Http\Controllers\SuperAdmin\PaystackController;
 use App\Http\Controllers\SuperAdmin\FlutterwaveController;
 use App\Http\Controllers\SuperAdmin\StripeWebhookController;
+use App\Http\Controllers\SuperAdmin\PayFastWebhookController;
+use App\Http\Controllers\SuperAdmin\PaystackWebhookController;
 use App\Http\Controllers\SuperAdmin\RazorpayWebhookController;
 use App\Http\Controllers\SuperAdmin\FlutterwaveWebhookController;
-use App\Http\Controllers\SuperAdmin\PaypalController;
-use App\Http\Controllers\PaypalPaymentController;
-use App\Http\Controllers\SuperAdmin\PayFastWebhookController;
-use App\Http\Controllers\SuperAdmin\PayfastController;
-use App\Http\Controllers\SuperAdmin\PaystackWebhookController;
-use App\Http\Controllers\SuperAdmin\PaystackController;
-use App\Livewire\CustomerDisplay;
+
 
 Route::get('/manifest.json', [HomeController::class, 'manifest'])->name('manifest');
 
@@ -60,7 +60,6 @@ Route::middleware(['clear.customer.language', LocaleMiddleware::class])->group(f
     Route::get('/restaurant-signup', [HomeController::class, 'signup'])->name('restaurant_signup');
     Route::get('/customer-logout', [HomeController::class, 'customerLogout'])->name('customer_logout');
     Route::get('page/{slug}', [CustomMenuController::class, 'index'])->name('customMenu');
-
 
 
     Route::group(['prefix' => 'restaurant', 'middleware' => ['customer.site.locale']], function () {
@@ -128,7 +127,6 @@ Route::middleware(['auth', config('jetstream.auth_session'), 'verified', 'clear.
 
     Route::resource('settings', RestaurantSettingController::class);
 
-
     Route::get('payments/export', fn() => Excel::download(new PaymentExport, 'payments-' . now()->toDateTimeString() . '.xlsx'))->name('payments.export');
     Route::view('payments', 'payments.index')->name('payments.index');
     Route::view('payments/due', 'payments.due')->name('payments.due');
@@ -158,7 +156,7 @@ Route::middleware(['auth', config('jetstream.auth_session'), 'verified', 'clear.
 
     Route::resource('waiter-requests', WaiterRequestController::class);
 
-    Route::get('/customer-display', [\App\Http\Controllers\PosController::class, 'customerDisplay'])->name('customer.display');
+    Route::get('/customer-display', [PosController::class, 'customerDisplay'])->name('customer.display');
 });
 
 Route::middleware(['auth', config('jetstream.auth_session'), 'verified', SuperAdmin::class, 'clear.customer.language', LocaleMiddleware::class])->group(function () {
@@ -174,11 +172,9 @@ Route::middleware(['auth', config('jetstream.auth_session'), 'verified', SuperAd
 
         Route::resource('invoices', BillingController::class);
 
-
         Route::get('offline-plan', [BillingController::class, 'offlinePlanRequests'])->name('offline-plan-request');
 
         Route::resource('superadmin-settings', SuperadminSettingController::class);
-
 
         Route::post('app-update/deleteFile', [GlobalSettingController::class, 'deleteFile'])->name('app-update.deleteFile');
         Route::resource('app-update', GlobalSettingController::class);
