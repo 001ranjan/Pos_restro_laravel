@@ -12,6 +12,7 @@ use App\Models\OrderTax;
 use App\Models\OrderItem;
 use App\Models\OrderCharge;
 use Livewire\Attributes\On;
+use App\Models\MultipleOrder;
 use App\Traits\PrinterSetting;
 use App\Models\KotCancelReason;
 use App\Models\DeliveryExecutive;
@@ -19,7 +20,6 @@ use Jantinnerezo\LivewireAlert\LivewireAlert;
 
 class OrderDetail extends Component
 {
-
     use LivewireAlert, PrinterSetting;
 
     public $order;
@@ -47,7 +47,6 @@ class OrderDetail extends Component
     public $taxMode;
     public $currencyId;
 
-
     public function mount()
     {
         $this->total = 0;
@@ -62,19 +61,26 @@ class OrderDetail extends Component
 
     public function printOrder($orderId)
     {
+        $orderPlaces = MultipleOrder::with('printerSetting')->get();
 
-
-        $orderPlaces = \App\Models\MultipleOrder::with('printerSetting')->get();
+        // Modified By Subrata Saha 10/08/2025
+        $printerSetting = null; // ✅ Initialize
 
         foreach ($orderPlaces as $orderPlace) {
-            $printerSetting = $orderPlace->printerSetting;
+            if ($orderPlace->printerSetting) {
+                $printerSetting = $orderPlace->printerSetting;
+                break; // ✅ Stop at first found setting (optional)
+            }
         }
+        // Modified By Subrata Saha 10/08/2025
+        
+        // foreach ($orderPlaces as $orderPlace) {
+        //     $printerSetting = $orderPlace->printerSetting;
+        // }
 
         try {
-
             switch ($printerSetting?->printing_choice) {
                 case 'directPrint':
-
                     $this->handleOrderPrint($orderId);
                     break;
                 default:

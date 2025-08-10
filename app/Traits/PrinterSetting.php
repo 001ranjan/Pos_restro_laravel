@@ -5,22 +5,22 @@ namespace App\Traits;
 use Exception;
 use App\Models\Kot;
 use App\Models\Order;
-use App\Models\KotPlace;
-use App\Models\MultipleOrder;
 use App\Models\Payment;
+use App\Models\PrintJob;
+use App\Models\KotPlace;
 use Mike42\Escpos\Printer;
 use App\Models\RestaurantTax;
+use App\Models\MultipleOrder;
 use App\Models\ReceiptSetting;
 use Mike42\Escpos\EscposImage;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Events\PrintJobCreated;
+use App\Traits\InMemoryConnector;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Printer as PrinterSettings;
 use Mike42\Escpos\PrintConnectors\CupsPrintConnector;
 use Mike42\Escpos\PrintConnectors\NetworkPrintConnector;
-use App\Models\PrintJob;
-use App\Traits\InMemoryConnector;
-use App\Events\PrintJobCreated;
 
 trait PrinterSetting
 {
@@ -28,7 +28,6 @@ trait PrinterSetting
     protected $charPerLine;
     protected $indentSize;
     protected $connector;
-
     protected $printerSetting;
     protected $restaurant;
 
@@ -82,7 +81,6 @@ trait PrinterSetting
         }
 
         $this->printKotThermalDefault($kotId, $printerSetting, $kotPlaceId);
-
 
         if ($alsoPrintOrder) {
             $kot = Kot::findOrFail($kotId);
@@ -163,7 +161,6 @@ trait PrinterSetting
 
     private function printKotHeader($restaurant, $kotPlace)
     {
-
         // $this->printer->text($restaurant->name . "\n");
         // $this->printer->setEmphasis(true);
 
@@ -177,7 +174,6 @@ trait PrinterSetting
             $this->printer->text($kotPlace->name . "\n");
             $this->printSeparator();
         }
-
 
         $this->printer->setEmphasis(true);
         $this->printer->text(__('modules.kot.kitchen_order_ticket') . "\n");
@@ -311,7 +307,6 @@ trait PrinterSetting
         $orderPlace = MultipleOrder::first();
         $printerSetting = $this->getActivePrinter($orderPlace->printer_id);
 
-
         $this->printerSetting = $printerSetting;
 
         if (!$printerSetting) {
@@ -326,7 +321,6 @@ trait PrinterSetting
         $order = $this->loadOrderWithRelations($orderId);
         $restaurant = restaurant();
         $receiptSettings = $this->getReceiptSettings($restaurant->id);
-
 
         $this->initializeOrderPrinter($printerSetting);
         $this->printOrderHeader($restaurant, $receiptSettings, $printerSetting);
@@ -622,8 +616,6 @@ trait PrinterSetting
             $summary[__('modules.order.tip')] = currency_format($order->tip_amount, restaurant()->currency_id);
         }
 
-
-
         $this->addDeliveryFeeToSummary($order, $summary);
         $this->addTaxesToSummary($order, $summary);
         $this->addBalanceReturnToSummary($order, $summary);
@@ -769,7 +761,6 @@ trait PrinterSetting
 
     private function createOrderPrintJob($branchId = null)
     {
-
         $this->printer->feed(1);
 
         try {
@@ -831,8 +822,8 @@ trait PrinterSetting
             'taxDetails' => $taxDetails,
             'payment' => $payment
         ])
-            ->setPaper('A4')
-            ->setWarnings(false);
+        ->setPaper('A4')
+        ->setWarnings(false);
 
         $filename = 'order_' . $orderId . '.pdf';
         $path = storage_path('app/temp/' . $filename);

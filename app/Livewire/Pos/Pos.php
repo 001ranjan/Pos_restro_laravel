@@ -1070,7 +1070,6 @@ class Pos extends Component
                     }
 
                     try {
-
                         // switch ($printerSetting?->printing_choice) {
                         //     case 'directPrint':
                         //         $this->handleOrderPrint($order->id);
