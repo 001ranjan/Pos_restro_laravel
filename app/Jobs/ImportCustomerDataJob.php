@@ -2,14 +2,14 @@
 
 namespace App\Jobs;
 
-use Illuminate\Bus\Queueable;
 use App\Imports\CustomerImport;
 use App\Imports\CustomersImport;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Contracts\Queue\ShouldQueue;
 
 class ImportCustomerDataJob implements ShouldQueue
 {

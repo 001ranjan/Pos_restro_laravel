@@ -23,7 +23,7 @@
 @endforeach
 | **{{ __('modules.order.subTotal') }}**   |               | **{{ currency_format($subtotal, $settings->currency_id) }}** |
 @if (!is_null($order->discount_amount))
-| **{{ __('modules.order.discount') }}** @if ($order->discount_type == 'percent') **({{ rtrim(rtrim($order->discount_value, '0'), '.') }}%)** @endif |     | **-{{ currency_format($order->discount_amount, $settings->currency_id) }}** |
+| **{{ __('modules.order.discount') }}** @if ($order->discount_type == 'percent') **({{ $order->discount_value == (int)$order->discount_value ? (int)$order->discount_value : $order->discount_value }}%)** @endif |     | **-{{ currency_format($order->discount_amount, $settings->currency_id) }}** |
 @endif
 @if($order->tip_amount > 0)
 | **{{ __('modules.order.tip') }}** |     | **{{ currency_format($order->tip_amount, $settings->currency_id) }}** |

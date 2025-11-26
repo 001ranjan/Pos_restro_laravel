@@ -2,12 +2,12 @@
 
 namespace App\Models;
 
-use RuntimeException;
+use Illuminate\Database\Eloquent\Model;
+use App\Models\Restaurant;
 use App\Models\Branch;
 use App\Models\Printer;
 use App\Traits\HasBranch;
-use App\Models\Restaurant;
-use Illuminate\Database\Eloquent\Model;
+use RuntimeException;
 
 class PrintJob extends Model
 {
@@ -22,7 +22,6 @@ class PrintJob extends Model
         'payload',
         'printed_at',
     ];
-
     protected $casts   = [
         'payload' => 'json',
         'printed_at' => 'datetime'
@@ -58,6 +57,7 @@ class PrintJob extends Model
         $paperWidthMm = $printerSetting->print_format == 'thermal80mm' ? 80 : $paperWidthMm;
         $paperWidthMm = $printerSetting->print_format == 'thermal56mm' ? 56 : $paperWidthMm;
         $paperWidthMm = $printerSetting->print_format == 'thermal112mm' ? 112 : $paperWidthMm;
+
 
         /* -------- 0. Sanitise width argument -------------------------------- */
         $paperWidthMm = (int) $paperWidthMm;
@@ -113,18 +113,18 @@ class PrintJob extends Model
 
         /* -------- 3. Build CSS with dynamic width --------------------------- */
         $css = <<<CSS
-        body{margin:0;padding:0;width:{$paperWidthMm}mm;font-family:'Courier New',monospace;font-size:12px}
-        .line{white-space:pre}
-        .center{text-align:center}.right{text-align:right}
-        .bold{font-weight:bold}
-        CSS;
+body{margin:0;padding:0;width:{$paperWidthMm}mm;font-family:'Courier New',monospace;font-size:12px}
+.line{white-space:pre}
+.center{text-align:center}.right{text-align:right}
+.bold{font-weight:bold}
+CSS;
 
         /* -------- 4. Assemble the HTML doc ---------------------------------- */
         return "<!DOCTYPE html>
-            <html lang=\"en\"><head>
-            <meta charset=\"utf-8\"><title>Thermal Ticket</title>
-            <style>{$css}</style></head><body>
-            " . implode("\n", $lines) . "
-            </body></html>";
+<html lang=\"en\"><head>
+<meta charset=\"utf-8\"><title>Thermal Ticket</title>
+<style>{$css}</style></head><body>
+" . implode("\n", $lines) . "
+</body></html>";
     }
 }

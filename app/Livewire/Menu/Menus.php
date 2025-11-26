@@ -3,9 +3,9 @@
 namespace App\Livewire\Menu;
 
 use App\Models\Menu;
-use Livewire\Component;
-use Livewire\Attributes\On;
 use Jantinnerezo\LivewireAlert\LivewireAlert;
+use Livewire\Attributes\On;
+use Livewire\Component;
 
 class Menus extends Component
 {

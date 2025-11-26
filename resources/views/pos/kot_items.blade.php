@@ -349,30 +349,20 @@
                 </div>
             @endif
 
-            @if (!$orderID && count($orderItemList) > 0 && $extraCharges)
-                @foreach ($extraCharges as  $charge)
-                    <div wire:key="extraCharge-{{ $loop->index }}"
-                        class="flex justify-between text-gray-500 text-sm dark:text-neutral-400">
-                        <div class="inline-flex items-center gap-x-1">{{ $charge->charge_name }}
-                            @if ($charge->charge_type == 'percent')
-                                ({{ $charge->charge_value }}%)
-                            @endif
-                            <span class="text-red-500 hover:scale-110 active:scale-100 cursor-pointer"
-                                wire:click="removeExtraCharge('{{ $charge->id }}', '{{ $orderType }}')">
-                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"
-                                    xmlns="http://www.w3.org/2000/svg">
-                                    <path fill-rule="evenodd"
-                                        d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                                        clip-rule="evenodd" />
-                                </svg>
-                            </span>
-                        </div>
-                        <div>
-                            {{ currency_format($charge->getAmount($discountedTotal), restaurant()->currency_id) }}
-                        </div>
-                    </div>
-                @endforeach
-            @endif
+            @php
+                // Separate Service Charge from other extra charges (for display after taxes)
+                $serviceCharge = null;
+                $otherCharges = [];
+                if (!$orderID && count($orderItemList) > 0 && $extraCharges) {
+                    foreach ($extraCharges as $charge) {
+                        if (stripos($charge->charge_name, 'service') !== false || stripos($charge->charge_name, 'service charge') !== false) {
+                            $serviceCharge = $charge;
+                        } else {
+                            $otherCharges[] = $charge;
+                        }
+                    }
+                }
+            @endphp
 
             @if ($taxMode == 'order')
                 @foreach ($taxes as $item)
@@ -385,6 +375,24 @@
                         </div>
                     </div>
                 @endforeach
+                @if (count($taxes) > 0)
+                    @php
+                        $isInclusive = restaurant()->tax_inclusive ?? false;
+                    @endphp
+                    <div class="flex justify-between text-gray-500 text-sm dark:text-neutral-400">
+                        <div>
+                            @lang('modules.order.totalTax')
+                            @if ($isInclusive)
+                                <span class="text-xs text-gray-400">(@lang('modules.settings.taxInclusive'))</span>
+                            @else
+                                <span class="text-xs text-gray-400">(@lang('modules.settings.taxExclusive'))</span>
+                            @endif
+                        </div>
+                        <div>
+                            {{ currency_format($totalTaxAmount, restaurant()->currency_id) }}
+                        </div>
+                    </div>
+                @endif
             @else
                 @php
                     // Show item-wise tax breakdown above total tax
@@ -423,7 +431,8 @@
                             @if ($isInclusive)
                                 <span class="text-xs text-gray-400">(@lang('modules.settings.taxInclusive'))</span>
                             @else
-                                <span class="text-xs text-gray-400">(@lang('modules.order.taxExclusive'))</span>
+                            {{-- <span class="text-xs text-gray-400">(@lang('modules.order.taxExclusive'))</span> --}}
+                                <span class="text-xs text-gray-400">(@lang('modules.settings.taxExclusive'))</span>
                             @endif
                         </div>
                         <div>
@@ -431,6 +440,55 @@
                         </div>
                     </div>
                 @endif
+            @endif
+
+            @if ($serviceCharge)
+                <div wire:key="serviceCharge"
+                    class="flex justify-between text-gray-500 text-sm dark:text-neutral-400">
+                    <div class="inline-flex items-center gap-x-1">
+                        @lang('modules.order.serviceCharge')
+                        @if ($serviceCharge->charge_type == 'percent')
+                            ({{ $serviceCharge->charge_value }}%)
+                        @endif
+                        <span class="text-red-500 hover:scale-110 active:scale-100 cursor-pointer"
+                            wire:click="removeExtraCharge('{{ $serviceCharge->id }}', '{{ $orderType }}')">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path fill-rule="evenodd"
+                                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                        </span>
+                    </div>
+                    <div>
+                        {{ currency_format($serviceCharge->getAmount($discountedTotal), restaurant()->currency_id) }}
+                    </div>
+                </div>
+            @endif
+
+            @if (!empty($otherCharges))
+                @foreach ($otherCharges as $charge)
+                    <div wire:key="extraCharge-{{ $loop->index }}"
+                        class="flex justify-between text-gray-500 text-sm dark:text-neutral-400">
+                        <div class="inline-flex items-center gap-x-1">{{ $charge->charge_name }}
+                            @if ($charge->charge_type == 'percent')
+                                ({{ $charge->charge_value }}%)
+                            @endif
+                            <span class="text-red-500 hover:scale-110 active:scale-100 cursor-pointer"
+                                wire:click="removeExtraCharge('{{ $charge->id }}', '{{ $orderType }}')">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path fill-rule="evenodd"
+                                        d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                            </span>
+                        </div>
+                        <div>
+                            {{ currency_format($charge->getAmount($discountedTotal), restaurant()->currency_id) }}
+                        </div>
+                    </div>
+                @endforeach
             @endif
 
             <div class="flex justify-between font-medium dark:text-neutral-300">

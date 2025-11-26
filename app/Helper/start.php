@@ -1,23 +1,23 @@
 <?php
 
-use App\Helper\Files;
-use App\Models\Package;
-use App\Models\Currency;
-use App\Models\Restaurant;
-use Illuminate\Support\Str;
 use App\Models\EmailSetting;
 use App\Models\GlobalSetting;
-use App\Models\PusherSetting;
-use App\Models\StorageSetting;
-use App\Models\GlobalCurrency;
 use App\Models\LanguageSetting;
-use Spatie\Permission\Models\Role;
-use Nwidart\Modules\Facades\Module;
+use App\Helper\Files;
+use App\Models\Package;
+use App\Models\PaymentGatewayCredential;
+use App\Models\PusherSetting;
+use App\Models\Restaurant;
+use App\Models\StorageSetting;
+use App\Models\SuperadminPaymentGateway;
+use App\Models\GlobalCurrency;
+use App\Models\Currency;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Artisan;
-use App\Models\SuperadminPaymentGateway;
-use App\Models\PaymentGatewayCredential;
+use Spatie\Permission\Models\Role;
+use Illuminate\Support\Str;
+use Nwidart\Modules\Facades\Module;
 
 if (!function_exists('user')) {
 
@@ -29,6 +29,7 @@ if (!function_exists('user')) {
         if (session()->has('user')) {
             return session('user');
         }
+
 
         session(['user' => auth()->user()]);
 
@@ -57,10 +58,12 @@ function restaurant()
             return session('restaurant');
         }
     }
+
     // session(['restaurant' => Restaurant::first()]); // Used in Non-saas
 
     // return session('restaurant');  // Used in Non-saas
     return false;  // Used in Saas
+
 }
 
 function shop($hash = null)
@@ -75,6 +78,7 @@ function shop($hash = null)
     }
 
     return false;  // Used in Saas
+
 }
 
 function branch()
@@ -157,6 +161,7 @@ if (!function_exists('check_migrate_status')) {
     // @codingStandardsIgnoreLine
     function check_migrate_status()
     {
+
         if (!session()->has('check_migrate_status')) {
 
             $status = Artisan::call('migrate:check');
@@ -238,11 +243,13 @@ if (!function_exists('restaurant_modules')) {
     }
 }
 
+
 if (!function_exists('global_setting')) {
 
     // @codingStandardsIgnoreLine
     function global_setting()
     {
+
         if (cache()->has('global_setting')) {
             return cache('global_setting');
         }
@@ -272,6 +279,7 @@ if (!function_exists('branches')) {
 
     function branches()
     {
+
         if (session()->has('branches')) {
             return session('branches');
         }
@@ -288,6 +296,7 @@ if (!function_exists('isRtl')) {
 
     function isRtl()
     {
+
         if (session()->has('isRtl')) {
             return session('isRtl');
         }
@@ -306,6 +315,7 @@ if (!function_exists('languages')) {
 
     function languages()
     {
+
         if (cache()->has('languages')) {
             return cache('languages');
         }
@@ -351,6 +361,7 @@ if (!function_exists('download_local_s3')) {
     // @codingStandardsIgnoreLine
     function download_local_s3($file, $path)
     {
+
         if (in_array(config('filesystems.default'), StorageSetting::S3_COMPATIBLE_STORAGE)) {
             return Storage::disk(config('filesystems.default'))->download($path, basename($file->filename));
         }
@@ -366,6 +377,7 @@ if (!function_exists('download_local_s3')) {
         }
     }
 }
+
 
 if (!function_exists('asset_url')) {
 
@@ -448,6 +460,7 @@ if (!function_exists('getDomainSpecificUrl')) {
     }
 }
 
+
 function module_enabled($moduleName)
 {
     return Module::has($moduleName) && Module::isEnabled($moduleName);
@@ -457,6 +470,7 @@ if (!function_exists('package')) {
 
     function package()
     {
+
         if (cache()->has('package')) {
             return cache('package');
         }
@@ -482,8 +496,10 @@ function superadminPaymentGateway()
     return cache('superadminPaymentGateway');
 }
 
+
 function pusherSettings()
 {
+
     if (cache()->has('pusherSettings')) {
         return cache('pusherSettings');
     }
@@ -553,6 +569,44 @@ if (!function_exists('currency_format')) {
     }
 }
 
+if (!function_exists('round_off_details')) {
+
+    /**
+     * Calculate round off information for a payable amount.
+     */
+    function round_off_details(float $amount): array
+    {
+        $roundedTotal = round($amount);
+
+        return [
+            'rounded_total' => $roundedTotal,
+            'round_off' => round($roundedTotal - $amount, 2),
+        ];
+    }
+}
+
+if (!function_exists('format_round_off_amount')) {
+
+    /**
+     * Format the round off amount with +/- sign and currency.
+     */
+    function format_round_off_amount(float $amount, $currencyId = null): string
+    {
+        $sign = '';
+
+        if ($amount > 0) {
+            $sign = '+';
+        } elseif ($amount < 0) {
+            $sign = '-';
+        }
+
+        $formatted = currency_format(abs($amount), $currencyId);
+
+        return $amount === 0.0 ? $formatted : $sign . $formatted;
+    }
+}
+
+
 if (!function_exists('global_currency_format_setting')) {
 
     // @codingStandardsIgnoreLine
@@ -573,6 +627,7 @@ if (!function_exists('global_currency_format')) {
     function global_currency_format($amount, $currencyId = null, $showSymbol = true)
     {
         $formats = global_currency_format_setting($currencyId);
+
 
         if (!$showSymbol) {
             $currency_symbol = '';
@@ -616,6 +671,7 @@ if (!function_exists('custom_module_plugins')) {
     // @codingStandardsIgnoreLine
     function custom_module_plugins()
     {
+
         if (!cache()->has('custom_module_plugins')) {
             $plugins = \Nwidart\Modules\Facades\Module::allEnabled();
             cache(['custom_module_plugins' => array_keys($plugins)]);

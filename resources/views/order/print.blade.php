@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="{{ app()->getLocale() }}" dir="{{ isRtl() ? 'rtl' : 'ltr' }}">
 
 <head>
@@ -256,9 +256,13 @@
                     <tr>
                         <td class="qty">{{ $item->quantity }}</td>
                         <td class="description">
-                            {{ $item->menuItem->item_name }}
+                            @if ($item->menuItem)
+                                {{ $item->menuItem->item_name }}
+                            @else
+                                {{ __('modules.menu.itemName') }} #{{ $item->menu_item_id }} (@lang('app.unavailable'))
+                            @endif
 
-                            @if (isset($item->menuItemVariation))
+                            @if ($item->menuItemVariation && isset($item->menuItemVariation->variation))
                                 <br><small>({{ $item->menuItemVariation->variation }})</small>
                             @endif
                             @foreach ($item->modifierOptions as $modifier)
@@ -279,13 +283,13 @@
         <div class="summary">
             <div class="summary-row">
                 <span>@lang('modules.order.subTotal'):</span>
-                <span>{{ currency_format($order->sub_total, restaurant()->currency_id) }}</span>
+                <span>{{ currency_format($order->items->sum('amount'), restaurant()->currency_id) }}</span>
             </div>
 
-            @if (!is_null($order->discount_amount))
+            @if (!is_null($order->discount_amount) && $order->discount_amount > 0)
                 <div class="summary-row">
                     <span>@lang('modules.order.discount') @if ($order->discount_type == 'percent')
-                            ({{ rtrim(rtrim($order->discount_value, '0'), '.') }}%)
+                            ({{ $order->discount_value == (int)$order->discount_value ? (int)$order->discount_value : $order->discount_value }}%)
                         @endif
                     </span>
                     <span>-{{ currency_format($order->discount_amount, restaurant()->currency_id) }}</span>
@@ -300,7 +304,7 @@
                     @endif:
                 </span>
                 <span>
-                    {{ currency_format(($item->charge->getAmount($order->sub_total - ($order->discount_amount ?? 0))), restaurant()->currency_id) }}
+                    {{ currency_format(($item->charge->getAmount($order->items->sum('amount') - ($order->discount_amount ?? 0))), restaurant()->currency_id) }}
                 </span>
             </div>
             @endforeach
@@ -329,7 +333,7 @@
                 @foreach ($order->taxes as $item)
                     <div class="summary-row">
                         <span>{{ $item->tax->tax_name }} ({{ $item->tax->tax_percent }}%):</span>
-                        <span>{{ currency_format(($item->tax->tax_percent / 100) * ($order->sub_total - ($order->discount_amount ?? 0)), restaurant()->currency_id) }}</span>
+                        <span>{{ currency_format(($item->tax->tax_percent / 100) * ($order->items->sum('amount') - ($order->discount_amount ?? 0)), restaurant()->currency_id) }}</span>
                     </div>
                 @endforeach
             @else
@@ -374,11 +378,28 @@
                     <span>{{ currency_format($payment->balance, restaurant()->currency_id) }}</span>
                 </div>
             @endif
-
             <div class="summary-row total">
                 <span>@lang('modules.order.total'):</span>
                 <span>{{ currency_format($order->total, restaurant()->currency_id) }}</span>
             </div>
+
+            {{-- Round-off rows disabled for now.
+            @php
+                $roundOffDetails = round_off_details($order->total);
+                $formattedRoundOff = $roundOffDetails['round_off'];
+            @endphp
+
+            @if ($formattedRoundOff != 0.0)
+                <div class="summary-row">
+                    <span>@lang('modules.order.roundOff'):</span>
+                    <span>{{ format_round_off_amount($formattedRoundOff, restaurant()->currency_id) }}</span>
+                </div>
+                <div class="summary-row total">
+                    <span>@lang('modules.order.grandTotal'):</span>
+                    <span>{{ currency_format($roundOffDetails['rounded_total'], restaurant()->currency_id) }}</span>
+                </div>
+            @endif
+            --}}
 
         </div>
 

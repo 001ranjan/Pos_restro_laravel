@@ -2,13 +2,13 @@
 
 namespace App\Livewire\Customer;
 
-use App\Models\Order;
-use Livewire\Component;
 use App\Models\Customer;
-use Livewire\Attributes\On;
-use Livewire\WithPagination;
-use Livewire\WithoutUrlPagination;
+use App\Models\Order;
 use Jantinnerezo\LivewireAlert\LivewireAlert;
+use Livewire\Attributes\On;
+use Livewire\Component;
+use Livewire\WithoutUrlPagination;
+use Livewire\WithPagination;
 
 class CustomerTable extends Component
 {
@@ -74,7 +74,7 @@ class CustomerTable extends Component
             ->where('name', 'like', '%' . $this->search . '%')->orWhere('email', 'like', '%' . $this->search . '%')
             ->orWhere('phone', 'like', '%' . $this->search . '%')
             ->orderBy('id', 'desc')
-            ->paginate(25);
+            ->paginate(10);
 
         return view('livewire.customer.customer-table', [
             'customers' => $query

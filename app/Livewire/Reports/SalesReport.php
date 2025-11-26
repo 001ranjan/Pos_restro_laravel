@@ -191,7 +191,7 @@ class SalesReport extends Component
                 ELSE restaurant_charges.charge_value END')) ?? 0;
             }
 
-            // Get tax breakdown from both item and order level taxes - flexible approach
+            // Get tax breakdown - first try tax_breakup from order_items, then fallback to stored total_tax_amount
             $taxAmounts = [];
             $totalTaxAmount = 0;
             $taxDetails = [];
@@ -207,110 +207,67 @@ class SalesReport extends Component
                 ];
             }
 
-            // First, try to get item-level tax data (regardless of current tax mode)
-            $itemTaxData = DB::table('order_items')
+            // First, try to get tax breakdown from order_items tax_breakup
+            $itemTaxBreakup = DB::table('order_items')
                 ->join('orders', 'order_items.order_id', '=', 'orders.id')
-                ->join('menu_items', 'order_items.menu_item_id', '=', 'menu_items.id')
-                ->join('menu_item_tax', 'menu_items.id', '=', 'menu_item_tax.menu_item_id')
-                ->join('taxes', 'menu_item_tax.tax_id', '=', 'taxes.id')
                 ->where('orders.status', 'paid')
                 ->where('orders.branch_id', branch()->id)
                 ->whereDate('orders.date_time', $item->date)
-                ->select(
-                    'taxes.tax_name',
-                    'taxes.tax_percent',
-                    'order_items.tax_amount',
-                    'order_items.quantity',
-                    'order_items.order_id',
-                    'menu_items.id as menu_item_id'
-                )
+                ->whereNotNull('order_items.tax_breakup')
+                ->select('order_items.tax_breakup', 'order_items.quantity')
                 ->get();
 
-            // Process item-level taxes if found
-            if ($itemTaxData->isNotEmpty()) {
-                // Group by order_id and menu_item_id to calculate tax properly per order item
-                $orderItemGroups = $itemTaxData->groupBy(['order_id', 'menu_item_id']);
-
-                foreach ($orderItemGroups as $orderId => $menuItems) {
-                    foreach ($menuItems as $menuItemId => $itemTaxes) {
-                        $totalTaxPercent = $itemTaxes->sum('tax_percent');
-                        $orderItemTaxAmount = $itemTaxes->first()->tax_amount ?? 0;
-
-                        foreach ($itemTaxes as $taxItem) {
-                            $taxName = $taxItem->tax_name;
-                            $taxPercent = $taxItem->tax_percent;
-
-                            // Calculate proportional tax amount for this specific order item
-                            $proportionalAmount = $totalTaxPercent > 0 ?
-                                ($orderItemTaxAmount * ($taxPercent / $totalTaxPercent)) : 0;
-
-                            $taxAmounts[$taxName] += $proportionalAmount;
-                            $taxDetails[$taxName]['total_amount'] += $proportionalAmount;
-                            $taxDetails[$taxName]['items_count'] += $taxItem->quantity;
+            if ($itemTaxBreakup->isNotEmpty()) {
+                // Use tax_breakup from order_items
+                foreach ($itemTaxBreakup as $itemBreakup) {
+                    $breakup = json_decode($itemBreakup->tax_breakup, true);
+                    if ($breakup && is_array($breakup)) {
+                        foreach ($breakup as $taxName => $taxAmount) {
+                            if (isset($taxAmounts[$taxName])) {
+                                $taxAmounts[$taxName] += $taxAmount;
+                                $taxDetails[$taxName]['total_amount'] += $taxAmount;
+                                $taxDetails[$taxName]['items_count'] += $itemBreakup->quantity;
+                            }
                         }
                     }
                 }
-            }
+                $totalTaxAmount = array_sum($taxAmounts);
+            } else {
+                // Fallback: Use stored total_tax_amount and distribute proportionally
+                $storedTotalTax = DB::table('orders')
+                    ->where('orders.status', 'paid')
+                    ->where('orders.branch_id', branch()->id)
+                    ->whereDate('orders.date_time', $item->date)
+                    ->sum('orders.total_tax_amount') ?? 0;
 
-            // Second, try to get order-level tax data (regardless of current tax mode)
-            $orderTaxData = DB::table('order_taxes')
-                ->join('orders', 'order_taxes.order_id', '=', 'orders.id')
-                ->join('taxes', 'order_taxes.tax_id', '=', 'taxes.id')
-                ->where('orders.status', 'paid')
-                ->where('orders.branch_id', branch()->id)
-                ->whereDate('orders.date_time', $item->date)
-                ->select(
-                    'taxes.tax_name',
-                    'taxes.tax_percent',
-                    'orders.sub_total',
-                    'orders.discount_amount',
-                    'orders.id as order_id'
-                )
-                ->get();
+                $ordersCount = DB::table('orders')
+                    ->where('orders.status', 'paid')
+                    ->where('orders.branch_id', branch()->id)
+                    ->whereDate('orders.date_time', $item->date)
+                    ->where('orders.total_tax_amount', '>', 0)
+                    ->count();
 
-            // Process order-level taxes if found
-            if ($orderTaxData->isNotEmpty()) {
-                foreach ($orderTaxData as $orderTax) {
-                    $taxName = $orderTax->tax_name;
-                    $taxAmount = ($orderTax->tax_percent / 100) * ($orderTax->sub_total - ($orderTax->discount_amount ?? 0));
+                if ($storedTotalTax > 0) {
+                    // Group taxes by name and sum their percentages
+                    $taxGroups = $taxes->groupBy('tax_name');
+                    $totalTaxPercent = 0;
+                    foreach ($taxGroups as $taxName => $taxGroup) {
+                        $totalTaxPercent += $taxGroup->sum('tax_percent');
+                    }
 
-                    $taxAmounts[$taxName] += $taxAmount;
-                    $taxDetails[$taxName]['total_amount'] += $taxAmount;
-                    $taxDetails[$taxName]['items_count'] += 1; // Count as one order
+                    if ($totalTaxPercent > 0) {
+                        foreach ($taxGroups as $taxName => $taxGroup) {
+                            $taxPercent = $taxGroup->sum('tax_percent');
+                            $proportionalAmount = ($storedTotalTax * $taxPercent) / $totalTaxPercent;
+                            $taxAmounts[$taxName] = $proportionalAmount;
+                            $taxDetails[$taxName]['total_amount'] = $proportionalAmount;
+                            $taxDetails[$taxName]['items_count'] = $ordersCount;
+                            $taxDetails[$taxName]['percent'] = $taxGroup->first()->tax_percent;
+                        }
+                    }
                 }
+                $totalTaxAmount = $storedTotalTax;
             }
-
-            // If neither item nor order taxes found, try fallback calculation
-            if (empty($itemTaxData) && empty($orderTaxData)) {
-                foreach ($taxes as $tax) {
-                    // Try item-level calculation using direct tax amount from order_items
-                    $itemTaxAmount = DB::table('order_items')
-                        ->join('orders', 'order_items.order_id', '=', 'orders.id')
-                        ->join('menu_item_tax', 'order_items.menu_item_id', '=', 'menu_item_tax.menu_item_id')
-                        ->join('taxes', 'menu_item_tax.tax_id', '=', 'taxes.id')
-                        ->where('taxes.id', $tax->id)
-                        ->where('orders.status', 'paid')
-                        ->where('orders.branch_id', branch()->id)
-                        ->whereDate('orders.date_time', $item->date)
-                        ->sum(DB::raw('
-                            CASE
-                                WHEN (SELECT COUNT(*) FROM menu_item_tax WHERE menu_item_id = order_items.menu_item_id) > 1
-                                THEN (order_items.tax_amount * (taxes.tax_percent /
-                                    (SELECT SUM(t.tax_percent) FROM menu_item_tax mit
-                                    JOIN taxes t ON mit.tax_id = t.id
-                                    WHERE mit.menu_item_id = order_items.menu_item_id)
-                                ))
-                                ELSE COALESCE(order_items.tax_amount, 0)
-                            END
-                        ')) ?? 0;
-
-                    $taxAmounts[$tax->tax_name] += $itemTaxAmount;
-                    $taxDetails[$tax->tax_name]['total_amount'] += $itemTaxAmount;
-                }
-            }
-
-            // Calculate total tax amount
-            $totalTaxAmount = array_sum($taxAmounts);
 
             return [
                 'date' => $item->date,

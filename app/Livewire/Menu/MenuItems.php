@@ -7,13 +7,14 @@ use Livewire\Component;
 use App\Models\MenuItem;
 use Livewire\Attributes\On;
 use App\Models\ItemCategory;
-use Livewire\WithPagination;
 use App\Scopes\AvailableMenuItemScope;
+use Livewire\WithPagination;
 use Jantinnerezo\LivewireAlert\LivewireAlert;
 use Livewire\Features\SupportPagination\WithoutUrlPagination;
 
 class MenuItems extends Component
 {
+
     use WithPagination, WithoutUrlPagination, LivewireAlert;
 
     public $showEditMenuItem = false;
@@ -173,7 +174,7 @@ class MenuItems extends Component
             $this->clearFilterButton = true;
         }
 
-        $query = $query->search('item_name', $this->search)->orderBy('id', 'desc')->paginate(25);
+        $query = $query->search('item_name', $this->search)->orderBy('id', 'desc')->paginate(10);
 
         return view('livewire.menu.menu-items', [
             'menuItems' => $query

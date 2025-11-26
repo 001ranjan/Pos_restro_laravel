@@ -4,6 +4,7 @@ namespace App\Helper;
 
 class Reply
 {
+
     /** Return success response
      * @param string $message
      * @return array
@@ -79,6 +80,7 @@ class Reply
             'action' => 'redirect',
             'url' => $url
         ];
+
     }
 
     private static function getTranslated($message)
@@ -90,6 +92,7 @@ class Reply
         }
 
         return $trans;
+
     }
 
     public static function dataOnly($data)

@@ -4,13 +4,14 @@ namespace App\Helper;
 
 use App\Models\FileStorage;
 use App\Models\StorageSetting;
+use Froiden\RestAPI\Exceptions\ApiException;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
-use Froiden\RestAPI\Exceptions\ApiException;
 use Intervention\Image\ImageManagerStatic as Image;
 
 class Files
 {
+
     const UPLOAD_FOLDER = 'user-uploads';
     const IMPORT_FOLDER = 'import-files';
 
@@ -59,6 +60,7 @@ class Files
 
         // Deleting temp file
         File::delete($tempPath);
+
 
         return $newName;
     }
@@ -171,6 +173,7 @@ class Files
         File::delete($tempPath);
     }
 
+
     public static function fileStore($file, $folder, $generateNewName = '', $uploaded = false, $restaurantId = null)
     {
         // Generate a new name if $generateNewName is empty
@@ -231,6 +234,7 @@ class Files
         return true;
     }
 
+
     public static function deleteDirectory($folder)
     {
         $dir = trim($folder);
@@ -239,6 +243,7 @@ class Files
         } catch (\Exception $e) {
             return true;
         }
+
 
         return true;
     }
@@ -256,6 +261,8 @@ class Files
             File::makeDirectory($directoryPath, 0775, true);
         }
     }
+
+
 
     public static function uploadLocalFile($fileName, $path, $companyId = null): void
     {
@@ -298,6 +305,8 @@ class Files
 
         return false;
     }
+
+
 
     public static function getFormattedSizeAndStatus($maxSizeKey)
     {

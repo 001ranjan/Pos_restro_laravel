@@ -3,8 +3,8 @@
 namespace App\Imports;
 
 use App\Models\Customer;
-use Maatwebsite\Excel\Concerns\ToModel;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithChunkReading;
 
@@ -34,12 +34,15 @@ class CustomerImport implements ToModel, WithHeadingRow, WithChunkReading, Shoul
         else{
             // Otherwise, create a new customer record
             return new Customer([
-                'name'          => $row['name'] ?? null,
-                'phone'         => $row['phone'] ?? null,
-                'email'         => $row['email'] ?? null,
-                'restaurant_id' => $this->restaurantId,
+            'name'        => $row['name'] ?? null,
+            'phone'       => $row['phone'] ?? null,
+            'email'       => $row['email'] ?? null,
+            'restaurant_id' => $this->restaurantId,
             ]);
         }
+
+
+
     }
 
     public function chunkSize(): int

@@ -344,7 +344,7 @@
                             class="flex justify-between text-xs text-green-500 dark:text-green-400">
                             <div>
                                 @lang('modules.order.discount') @if ($order->discount_type == 'percent')
-                                    ({{ rtrim(rtrim(number_format($order->discount_value, 2), '0'), '.') }}%)
+                                    ({{ $order->discount_value == (int)$order->discount_value ? (int)$order->discount_value : $order->discount_value }}%)
                                 @endif
                             </div>
                             <div>

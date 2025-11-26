@@ -265,7 +265,7 @@
                 @if (!is_null($orderDetail->discount_amount))
                 <div wire:key="discountAmount" class="flex justify-between text-sm text-green-500 dark:text-green-400">
                     <div>
-                        @lang('modules.order.discount') @if ($orderDetail->discount_type == 'percent') ({{ rtrim(rtrim($orderDetail->discount_value), '.') }}%) @endif
+                        @lang('modules.order.discount') @if ($orderDetail->discount_type == 'percent') ({{ $orderDetail->discount_value == (int)$orderDetail->discount_value ? (int)$orderDetail->discount_value : $orderDetail->discount_value }}%) @endif
                     </div>
                     <div>
                         -{{ currency_format($orderDetail->discount_amount, restaurant()->currency_id) }}

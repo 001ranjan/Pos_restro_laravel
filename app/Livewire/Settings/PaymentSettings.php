@@ -12,6 +12,7 @@ use Livewire\Features\SupportFileUploads\WithFileUploads;
 
 class PaymentSettings extends Component
 {
+
     use LivewireAlert, WithFileUploads;
 
     public $razorpaySecret;
@@ -80,9 +81,10 @@ class PaymentSettings extends Component
     public $testPaystackSecret;
     public $testPaystackMerchantEmail;
 
+
     public function mount()
     {
-        $settings = GlobalSetting::first();
+         $settings = GlobalSetting::first();
 
         $this->isGlobalRazorpayEnabled = (bool) $settings->enable_razorpay;
         $this->isGlobalStripeEnabled = (bool) $settings->enable_stripe;
@@ -96,6 +98,7 @@ class PaymentSettings extends Component
 
         $this->setCredentials();
     }
+
 
     private function setDefaultActivePaymentSetting()
     {
@@ -204,7 +207,7 @@ class PaymentSettings extends Component
         $this->testPayfastPassphrase = $this->paymentGateway->test_payfast_passphrase;
         $this->isPayfastEnabled = $this->paymentGateway->payfast_status;
 
-        $this->paystackStatus = (bool)$this->paymentGateway->paystack_status;
+         $this->paystackStatus = (bool)$this->paymentGateway->paystack_status;
         $this->paystackKey = $this->paymentGateway->paystack_key;
         $this->paystackSecret = $this->paymentGateway->paystack_secret;
         $this->paystackMerchantEmail = $this->paymentGateway->paystack_merchant_email;
@@ -290,12 +293,14 @@ class PaymentSettings extends Component
             $this->qrCodeImage = $this->paymentGateway->qr_code_image;
         }
 
+
         $updateData = [
             'is_offline_payment_enabled' => $this->enableOfflinePayment,
             'offline_payment_detail' => $this->enableOfflinePayment ? $this->paymentDetails : $this->paymentDetails,
             'is_qr_payment_enabled' => $this->enableQrPayment,
             'qr_code_image' => $this->qrCodeImage,
             'is_cash_payment_enabled' => $this->enablePayViaCash,
+
         ];
 
         $this->paymentGateway->update($updateData);
@@ -336,6 +341,7 @@ class PaymentSettings extends Component
 
     private function saveStripeSettings()
     {
+
         if (!$this->stripeStatus) {
             $this->paymentGateway->update([
                 'stripe_status' => $this->stripeStatus,
@@ -366,6 +372,7 @@ class PaymentSettings extends Component
 
     public function submitFlutterwaveForm()
     {
+
         $this->validate(
             [
                 'flutterwaveStatus' => 'required|boolean',
@@ -396,6 +403,7 @@ class PaymentSettings extends Component
 
     private function saveFlutterwaveSettings()
     {
+
         if (!$this->flutterwaveStatus) {
             $this->paymentGateway->update([
                 'flutterwave_status' => $this->flutterwaveStatus,
@@ -435,7 +443,6 @@ class PaymentSettings extends Component
 
         return 1;
     }
-
     public function submitFormPaypal()
     {
         $this->validate([
@@ -459,6 +466,8 @@ class PaymentSettings extends Component
 
     public function savePaypalSettings()
     {
+
+
         if (!$this->paypalStatus) {
             $this->paymentGateway->update([
                 'paypal_status' => $this->paypalStatus,
@@ -523,6 +532,7 @@ class PaymentSettings extends Component
 
     private function savePayfastSettings()
     {
+
         if (!$this->payfastStatus) {
             $this->paymentGateway->update([
                 'payfast_status' => $this->payfastStatus,
@@ -549,8 +559,10 @@ class PaymentSettings extends Component
         }
     }
 
+
     public function submitFormPaystack()
     {
+
         $this->validate([
             'testPaystackKey' => 'nullable|required_if:paystackMode,sandbox',
             'testPaystackSecret' => 'nullable|required_if:paystackMode,sandbox',
@@ -559,9 +571,10 @@ class PaymentSettings extends Component
             'paystackKey' => 'nullable|required_if:paystackMode,live',
             'paystackSecret' => 'nullable|required_if:paystackMode,live',
             'paystackMerchantEmail' => 'nullable|required_if:paystackMode,live|email',
-        ]);
+            ]);
 
         if ($this->savePaystackSettings() === 0) {
+
             $this->updatePaymentStatus();
             $this->alertSuccess();
         }
@@ -607,6 +620,7 @@ class PaymentSettings extends Component
 
         return 1;
     }
+
 
     public function updatePaymentStatus()
     {

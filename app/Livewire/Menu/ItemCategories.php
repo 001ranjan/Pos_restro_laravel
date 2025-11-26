@@ -2,15 +2,16 @@
 
 namespace App\Livewire\Menu;
 
-use Livewire\Component;
-use Livewire\Attributes\On;
-use Livewire\WithPagination;
 use App\Models\ItemCategory;
-use Livewire\WithoutUrlPagination;
 use Jantinnerezo\LivewireAlert\LivewireAlert;
+use Livewire\Attributes\On;
+use Livewire\Component;
+use Livewire\WithoutUrlPagination;
+use Livewire\WithPagination;
 
 class ItemCategories extends Component
 {
+
     use WithPagination, WithoutUrlPagination, LivewireAlert;
 
     public $showMenuCategoryModal = false;
@@ -56,7 +57,7 @@ class ItemCategories extends Component
     public function render()
     {
         return view('livewire.menu.item-categories', [
-            'categories' => ItemCategory::withCount('items')->search('category_name', $this->search)->paginate(15)
+            'categories' => ItemCategory::withCount('items')->search('category_name', $this->search)->paginate(10)
         ]);
     }
 

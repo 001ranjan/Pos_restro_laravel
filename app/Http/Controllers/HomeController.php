@@ -4,25 +4,27 @@ namespace App\Http\Controllers;
 
 use App\Models\Module;
 use App\Models\Package;
-use App\Models\Contact;
-use App\Models\FrontFaq;
 use App\Enums\PackageType;
-use App\Models\Restaurant;
+use App\Livewire\LandingSite\FooterSetting;
+use App\Models\Contact;
 use App\Models\CustomMenu;
 use App\Models\FrontDetail;
+use App\Models\FrontFaq;
 use App\Models\FrontFeature;
-use App\Models\LanguageSetting;
-use Froiden\Envato\Traits\AppBoot;
 use App\Models\FrontReviewSetting;
+use App\Models\LanguageSetting;
+use App\Models\Restaurant;
+use Froiden\Envato\Traits\AppBoot;
 use Illuminate\Support\Facades\File;
-use App\Livewire\LandingSite\FooterSetting;
 
 class HomeController extends Controller
 {
+
     use AppBoot;
 
     public function landing()
     {
+
         $this->showInstall();
 
         $global = global_setting();

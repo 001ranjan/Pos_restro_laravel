@@ -8,16 +8,16 @@ use App\Models\Role;
 use App\Models\Country;
 use Livewire\Component;
 use App\Models\Restaurant;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use App\Providers\RouteServiceProvider;
-use Spatie\Permission\Models\Permission;
 use App\Notifications\NewRestaurantSignup;
 use Illuminate\Support\Facades\Notification;
 use App\Notifications\WelcomeRestaurantEmail;
+use Spatie\Permission\Models\Permission;
 
 class RestaurantSignup extends Component
 {
+
     public $restaurantName;
     public $sub_domain;
     public $fullName;
@@ -162,14 +162,14 @@ class RestaurantSignup extends Component
         try {
             $user->notify(new WelcomeRestaurantEmail($restaurant, $this->password));
         } catch (\Exception $e) {
-            Log::error('Error sending restaurant welcome email: ' . $e->getMessage());
+            \Log::error('Error sending restaurant welcome email: ' . $e->getMessage());
         }
 
         $superadmins = User::withoutGlobalScopes()->role('Super Admin')->get();
         try {
             Notification::send($superadmins, new NewRestaurantSignup($restaurant));
         } catch (\Exception $e) {
-            Log::error('Error sending new restaurant signup notification: ' . $e->getMessage());
+            \Log::error('Error sending new restaurant signup notification: ' . $e->getMessage());
         }
 
         if (module_enabled('Subdomain')) {

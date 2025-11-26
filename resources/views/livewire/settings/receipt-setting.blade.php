@@ -356,6 +356,23 @@
                                                         <span>@lang('modules.order.total'):</span>
                                                         <span>{{ currency_format(38.5, restaurant()->currency_id) }}</span>
                                                     </div>
+
+                                                    {{-- Round-off preview disabled for now.
+                                                    @php
+                                                        $sampleRoundOff = round_off_details(38.5);
+                                                    @endphp
+
+                                                    @if ($sampleRoundOff['round_off'] != 0.0)
+                                                        <div class="summary-row">
+                                                            <span>@lang('modules.order.roundOff'):</span>
+                                                            <span>{{ format_round_off_amount($sampleRoundOff['round_off'], restaurant()->currency_id) }}</span>
+                                                        </div>
+                                                        <div class="summary-row total">
+                                                            <span>@lang('modules.order.grandTotal'):</span>
+                                                            <span>{{ currency_format($sampleRoundOff['rounded_total'], restaurant()->currency_id) }}</span>
+                                                        </div>
+                                                    @endif
+                                                    --}}
                                                 </div>
 
                                                 <div class="footer">

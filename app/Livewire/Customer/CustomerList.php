@@ -26,6 +26,7 @@ class CustomerList extends Component
 
     public function exportCustomerList()
     {
+
         if (!in_array('Export Report', restaurant_modules())) {
             $this->dispatch('showUpgradeLicense');
         }
@@ -35,6 +36,7 @@ class CustomerList extends Component
         }
     }
 
+
     #[On('closeAddCustomer')]
     public function closeAddCustomer()
     {
@@ -43,20 +45,21 @@ class CustomerList extends Component
 
     public function importCustomerList()
     {
+
         $this->validate([
-            'file' => 'required|mimes:xlsx,xls,csv|max:10240',
+            'file' => 'required|mimes:xlsx,csv|max:10240',
         ]);
 
         $filePath = $this->file->store('customer-imports');
         Bus::dispatch(new ImportCustomerDataJob($filePath, restaurant()->id));
-        $this->alert('success', __('messages.customerAdded'), [
+          $this->alert('success', __('messages.customerAdded'), [
             'toast' => true,
             'position' => 'top-end',
             'showCancelButton' => false,
             'cancelButtonText' => __('app.close')
-        ]);
+             ]);
 
-        $this->redirect(route('customers.index'), navigate: true);
+             $this->redirect(route('customers.index'), navigate: true);
     }
 
     public function render()

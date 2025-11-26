@@ -473,26 +473,47 @@ class Pos extends Component
 
         $this->discountedTotal = $this->total;
 
-        // Apply discounts
+        $isInclusive = restaurant()->tax_inclusive ?? false;
+        $preDiscountTotal = $this->total;
+        $exclusiveDiscountBase = $this->subTotal;
+        $inclusiveDiscountBase = $preDiscountTotal;
+
+        $this->discountAmount = 0;
+        $exclusiveDiscountRatio = 0;
+        $inclusiveDiscountRatio = 0;
+
+        // Apply discounts first
         if ($this->discountValue > 0 && $this->discountType) {
+            $discountBase = $isInclusive ? $inclusiveDiscountBase : $exclusiveDiscountBase;
+
             if ($this->discountType === 'percent') {
-                $this->discountAmount = round(($this->subTotal * $this->discountValue) / 100, 2);
+                $this->discountAmount = round(($discountBase * $this->discountValue) / 100, 2);
             } elseif ($this->discountType === 'fixed') {
-                $this->discountAmount = min($this->discountValue, $this->subTotal);
+                $this->discountAmount = min($this->discountValue, $discountBase);
             }
 
             $this->total -= $this->discountAmount;
+            if (!$isInclusive && $exclusiveDiscountBase > 0) {
+                $exclusiveDiscountRatio = min($this->discountAmount / $exclusiveDiscountBase, 1);
+            }
+
+            if ($isInclusive && $inclusiveDiscountBase > 0) {
+                $inclusiveDiscountRatio = min($this->discountAmount / $inclusiveDiscountBase, 1);
+            }
         }
 
-        $this->discountedTotal = $this->total;
+        $this->discountedTotal = max($this->total, 0);
 
-        // Calculate taxes using centralized method
+        $this->adjustItemTaxDetailsForDiscount($exclusiveDiscountRatio, $inclusiveDiscountRatio);
+
+        // Calculate taxes using centralized method - tax should be calculated after discount
         $this->recalculateTaxTotals();
 
-        // Apply extra charges
+        // Apply extra charges (service charge, etc.) - calculated on discounted amount
         if (!empty($this->orderItemAmount) && $this->extraCharges) {
             foreach ($this->extraCharges ?? [] as $charge) {
-                $this->total += $charge->getAmount($this->discountedTotal);
+                $chargeAmount = $charge->getAmount($this->discountedTotal);
+                $this->total += $chargeAmount;
             }
         }
 
@@ -505,7 +526,7 @@ class Pos extends Component
             $this->total += $this->deliveryFee;
         }
 
-        // Calculate tax and charge amounts for display
+        // Calculate tax and charge amounts for display - tax calculated on amount after discount
         $taxesForDisplay = $this->taxes->map(function($tax) {
             $amount = (($tax->tax_percent / 100) * $this->discountedTotal);
             return [
@@ -520,10 +541,10 @@ class Pos extends Component
                 'amount' => $charge->getAmount($this->discountedTotal),
             ];
         })->toArray();
-        
+
         $paymentGateway = restaurant()->paymentGateways;
         $qrCodeImageUrl = $paymentGateway && $paymentGateway->is_qr_payment_enabled ? $paymentGateway->qr_code_image_url : null;
-        
+
         Cache::put('customer_display_cart', [
             'order_number' => $this->orderNumber,
             'items' => $this->getCustomerDisplayItems(),
@@ -550,12 +571,40 @@ class Pos extends Component
         ]);
     }
 
+    private function adjustItemTaxDetailsForDiscount(float $exclusiveDiscountRatio, float $inclusiveDiscountRatio): void
+    {
+        if ($this->taxMode !== 'item' || empty($this->orderItemTaxDetails)) {
+            return;
+        }
+
+        $isInclusive = restaurant()->tax_inclusive ?? false;
+        $ratioToApply = $isInclusive ? (1 - $inclusiveDiscountRatio) : (1 - $exclusiveDiscountRatio);
+        $ratioToApply = max($ratioToApply, 0);
+
+        if ($ratioToApply === 1) {
+            return;
+        }
+
+        foreach ($this->orderItemTaxDetails as $key => $taxDetail) {
+            if (isset($taxDetail['tax_amount'])) {
+                $this->orderItemTaxDetails[$key]['tax_amount'] = round(($taxDetail['tax_amount'] ?? 0) * $ratioToApply, 2);
+            }
+
+            if (!empty($taxDetail['tax_breakup']) && is_array($taxDetail['tax_breakup'])) {
+                foreach ($taxDetail['tax_breakup'] as $taxName => $taxInfo) {
+                    $amount = $taxInfo['amount'] ?? 0;
+                    $this->orderItemTaxDetails[$key]['tax_breakup'][$taxName]['amount'] = round($amount * $ratioToApply, 2);
+                }
+            }
+        }
+    }
+
     private function recalculateTaxTotals()
     {
         $this->totalTaxAmount = 0;
 
         if ($this->taxMode === 'order') {
-            // Order-based taxation
+            // Order-based taxation - calculate tax on amount after discount
             foreach ($this->taxes as $tax) {
                 $taxAmount = ($tax->tax_percent / 100) * $this->discountedTotal;
                 $this->totalTaxAmount += $taxAmount;
@@ -567,7 +616,7 @@ class Pos extends Component
             $totalExclusiveTax = 0;
             $isInclusive = restaurant()->tax_inclusive ?? false;
 
-            // Calculate total tax amounts
+            // Calculate total tax amounts from adjusted item tax details
             foreach ($this->orderItemTaxDetails as $itemTaxDetail) {
                 $taxAmount = $itemTaxDetail['tax_amount'] ?? 0;
 
@@ -971,6 +1020,7 @@ class Pos extends Component
 
             $this->discountedTotal = $this->total;
 
+            // Apply discounts first
             if ($order->discount_type === 'percent') {
                 $this->discountAmount = round(($this->subTotal * $order->discount_value) / 100, 2);
             } elseif ($order->discount_type === 'fixed') {
@@ -980,10 +1030,24 @@ class Pos extends Component
             $this->total -= $this->discountAmount;
             $this->discountedTotal = $this->total;
 
-            // Use centralized tax calculation
-            $this->recalculateTaxTotals();
+            // For item-level taxes, use tax amounts from order items (already adjusted for discount)
+            if ($this->taxMode === 'item') {
+                $this->totalTaxAmount = $order->items->sum('tax_amount') ?? 0;
+                $isInclusive = restaurant()->tax_inclusive ?? false;
+                if (!$isInclusive) {
+                    // For exclusive taxes, add to total
+                    $this->total += $this->totalTaxAmount;
+                }
+            } else {
+                // For order-level taxes, recalculate on discounted amount
+                $this->recalculateTaxTotals();
+            }
 
-            $this->subTotal -= $this->totalTaxAmount;
+            // Only subtract tax from subtotal for inclusive taxes
+            $isInclusive = restaurant()->tax_inclusive ?? false;
+            if ($this->taxMode === 'item' && $isInclusive) {
+                $this->subTotal -= $this->totalTaxAmount;
+            }
 
             foreach ($this->extraCharges ?? [] as $value) {
                 $this->total += $value->getAmount($this->discountedTotal);
@@ -996,8 +1060,6 @@ class Pos extends Component
             if ($this->deliveryFee > 0) {
                 $this->total += $this->deliveryFee;
             }
-
-            $this->total -= $this->discountAmount;
 
             Order::where('id', $order->id)->update([
                 'sub_total' => $this->subTotal,

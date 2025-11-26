@@ -12,7 +12,6 @@ use App\Models\OrderTax;
 use App\Models\OrderItem;
 use App\Models\OrderCharge;
 use Livewire\Attributes\On;
-use App\Models\MultipleOrder;
 use App\Traits\PrinterSetting;
 use App\Models\KotCancelReason;
 use App\Models\DeliveryExecutive;
@@ -20,6 +19,7 @@ use Jantinnerezo\LivewireAlert\LivewireAlert;
 
 class OrderDetail extends Component
 {
+
     use LivewireAlert, PrinterSetting;
 
     public $order;
@@ -47,6 +47,7 @@ class OrderDetail extends Component
     public $taxMode;
     public $currencyId;
 
+
     public function mount()
     {
         $this->total = 0;
@@ -61,26 +62,19 @@ class OrderDetail extends Component
 
     public function printOrder($orderId)
     {
-        $orderPlaces = MultipleOrder::with('printerSetting')->get();
 
-        // Modified By Subrata Saha 10/08/2025
-        $printerSetting = null; // ✅ Initialize
+
+        $orderPlaces = \App\Models\MultipleOrder::with('printerSetting')->get();
 
         foreach ($orderPlaces as $orderPlace) {
-            if ($orderPlace->printerSetting) {
-                $printerSetting = $orderPlace->printerSetting;
-                break; // ✅ Stop at first found setting (optional)
-            }
+            $printerSetting = $orderPlace->printerSetting;
         }
-        // Modified By Subrata Saha 10/08/2025
-        
-        // foreach ($orderPlaces as $orderPlace) {
-        //     $printerSetting = $orderPlace->printerSetting;
-        // }
 
         try {
+
             switch ($printerSetting?->printing_choice) {
                 case 'directPrint':
+
                     $this->handleOrderPrint($orderId);
                     break;
                 default:
@@ -236,7 +230,16 @@ class OrderDetail extends Component
 
             foreach ($this->order->kot as $kot) {
                 foreach ($kot->items as $item) {
-                    $price = (($item->menu_item_variation_id) ? $item->menuItemVariation->price : $item->menuItem->price);
+                    // Check if menuItemVariation exists and has price, otherwise check menuItem
+                    if ($item->menu_item_variation_id && !is_null($item->menuItemVariation) && isset($item->menuItemVariation->price)) {
+                        $price = $item->menuItemVariation->price;
+                    } elseif (!is_null($item->menuItem) && isset($item->menuItem->price)) {
+                        $price = $item->menuItem->price;
+                    } else {
+                        // Fallback to stored price if menu item is not available
+                        $price = $item->price ?? 0;
+                    }
+
                     $amount = $price * $item->quantity;
 
                     // Calculate tax for item-level taxation
@@ -244,7 +247,7 @@ class OrderDetail extends Component
                     $taxPercentage = 0;
                     $taxBreakup = null;
 
-                    if ($this->taxMode === 'item') {
+                    if ($this->taxMode === 'item' && !is_null($item->menuItem)) {
                         $menuItem = $item->menuItem;
                         $taxes = $menuItem->taxes ?? collect();
                         $isInclusive = restaurant()->tax_inclusive ?? false;
@@ -587,11 +590,21 @@ class OrderDetail extends Component
         // For existing order items (when viewing order details), calculate from the order item itself
         if ($this->order && isset($this->order->items[$key])) {
             $orderItem = $this->order->items[$key];
-            $basePrice = !is_null($orderItem->menuItemVariation) ? $orderItem->menuItemVariation->price : $orderItem->menuItem->price;
+
+            // Check if menuItemVariation exists and has price, otherwise check menuItem
+            if (!is_null($orderItem->menuItemVariation) && isset($orderItem->menuItemVariation->price)) {
+                $basePrice = $orderItem->menuItemVariation->price;
+            } elseif (!is_null($orderItem->menuItem) && isset($orderItem->menuItem->price)) {
+                $basePrice = $orderItem->menuItem->price;
+            } else {
+                // Fallback to order item's stored price if menu item is not available
+                $basePrice = $orderItem->price ?? 0;
+            }
+
             $modifierPrice = $orderItem->modifierOptions->sum('price');
 
             // If tax is inclusive, calculate the display price without tax
-            if (restaurant()->tax_inclusive && restaurant()->tax_mode === 'item') {
+            if (restaurant()->tax_inclusive && restaurant()->tax_mode === 'item' && !is_null($orderItem->menuItem)) {
                 $menuItem = $orderItem->menuItem;
                 $taxes = $menuItem->taxes ?? collect();
                 $itemPriceWithModifiers = $basePrice + $modifierPrice;
