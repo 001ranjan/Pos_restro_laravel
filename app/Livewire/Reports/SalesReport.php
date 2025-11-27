@@ -222,11 +222,24 @@ class SalesReport extends Component
                 foreach ($itemTaxBreakup as $itemBreakup) {
                     $breakup = json_decode($itemBreakup->tax_breakup, true);
                     if ($breakup && is_array($breakup)) {
-                        foreach ($breakup as $taxName => $taxAmount) {
+                        foreach ($breakup as $taxName => $taxData) {
                             if (isset($taxAmounts[$taxName])) {
-                                $taxAmounts[$taxName] += $taxAmount;
-                                $taxDetails[$taxName]['total_amount'] += $taxAmount;
+                                // Handle both array structure (new format) and numeric value (old format)
+                                if (is_array($taxData)) {
+                                    $amount = ($taxData['amount'] ?? 0) * $itemBreakup->quantity;
+                                } else {
+                                    // Backward compatibility: if it's a number, use it directly
+                                    $amount = (float)$taxData * $itemBreakup->quantity;
+                                }
+
+                                $taxAmounts[$taxName] += $amount;
+                                $taxDetails[$taxName]['total_amount'] += $amount;
                                 $taxDetails[$taxName]['items_count'] += $itemBreakup->quantity;
+
+                                // Update percent if we have it from the breakup
+                                if (is_array($taxData) && isset($taxData['percent'])) {
+                                    $taxDetails[$taxName]['percent'] = $taxData['percent'];
+                                }
                             }
                         }
                     }
